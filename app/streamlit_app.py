@@ -9,13 +9,8 @@ sys.path.append(ROOT_PATH)
 
 from src.simulation.tournament import simulate_tournament, simulate_monte_carlo
 
-
-# CARGA MODELO
 MODEL_PATH = os.path.join(ROOT_PATH, "trained_models", "modelo_pipeline.pkl")
 model = joblib.load(MODEL_PATH)
-
-
-# 🌎 GRUPOS
 
 groups = {
     "A": ["Mexico", "South Africa", "South Korea", "Czech Republic"],
@@ -32,13 +27,10 @@ groups = {
     "L": ["England", "Croatia", "Ghana", "Panama"]
 }
 
-
-# MAPEO DE NOMBRES (display → dataset)
-
+# MAPEO NOMBRES (display --> dataset)
 team_mapping = {
     "USA":          "United States",
     "Curacao":      "Curaçao",
-    # South Korea, Iran, Ivory Coast, DR Congo
 }
 
 # Mapeo inverso para mostrar nombres bonitos
@@ -175,10 +167,9 @@ def build_features_dict(teams):
 
 
 # UI
-
 st.set_page_config(page_title="Simulador Mundial 2026", layout="wide")
 
-st.title("Simulador del Mundial 2026")
+st.title("🌎 Simulador del Mundial 2026")
 st.markdown("Simulación completa con un modelo predictivo basado en datos históricos y forma reciente de las selecciones. ¡Descubre quién tiene más chances de levantar la copa! 🏆⚽")
 
 
@@ -209,10 +200,10 @@ features_ready = build_features_dict(all_teams)
 
 if st.button("⚽ Simular Mundial 2026"):
 
-    
-    # SIMULACION MONTE CARLO
 
-    with st.spinner("Ejecutando 100 simulaciones (Monte Carlo)..."):
+    # MONTE CARLO
+    
+    with st.spinner("Ejecutando 100 simulaciones Monte Carlo..."):
         probs = simulate_monte_carlo(
             mapped_groups,
             features_ready,
@@ -228,7 +219,7 @@ if st.button("⚽ Simular Mundial 2026"):
     df_probs["Probabilidad (%)"] = (df_probs["Probabilidad (%)"] * 100).round(2)
     df_probs = df_probs.sort_values(by="Probabilidad (%)", ascending=False).reset_index(drop=True)
 
-    st.subheader("🏆 Probabilidad de campeón (Monte Carlo - 100 simulaciones)")
+    st.subheader("🏆 Probabilidad de campeón (Monte Carlo 100 simulaciones)")
     col1, col2 = st.columns([1, 2])
     with col1:
         st.dataframe(df_probs, use_container_width=True)
@@ -237,8 +228,8 @@ if st.button("⚽ Simular Mundial 2026"):
 
     st.markdown("---")
 
-    
-    # SIMULACIÓN CONCRETA
+
+    # IMULACIÓN CONCRETA
     
     with st.spinner("Simulando torneo completo..."):
         champion, matches, qualified_by_group, ko_results = simulate_tournament(
@@ -247,9 +238,9 @@ if st.button("⚽ Simular Mundial 2026"):
             model
         )
 
-    
-    # TABLA DE FASE DE GRUPOS
 
+    # TABLA DE FASE DE GRUPOS
+    
     st.subheader("📊 Fase de grupos — Tabla de posiciones")
 
     group_cols = st.columns(3)
@@ -274,9 +265,9 @@ if st.button("⚽ Simular Mundial 2026"):
 
     st.markdown("---")
 
-    
-    # RESULTADOS FASE DE GRUPOS
 
+    # RESULTADOS FASE DE GRUPOS
+    
     with st.expander("📋 Ver resultados detallados — Fase de grupos", expanded=False):
         match_cols = st.columns(3)
         for idx, (group, games) in enumerate(matches.items()):
@@ -288,55 +279,86 @@ if st.button("⚽ Simular Mundial 2026"):
     st.markdown("---")
 
     
-    # FASE KO
-    
-    st.subheader("🏆 Fase eliminatoria")
+    # BRACKET FASE KO 
 
-    round_icons = {
-        "Ronda de 32":      "⚽ Ronda de 32 — Dieciseisavos de Final",
-        "Octavos de Final": "🔥 Octavos de Final",
-        "Cuartos de Final": "⚡ Cuartos de Final",
-        "Semifinales":      "🌟 Semifinales",
-        "Final":            "🏆 Gran Final",
+    st.subheader("🏆 Fase eliminatoria — Bracket oficial FIFA 2026")
+
+    ROUND_ORDER = [
+        "Ronda de 32",
+        "Octavos de Final",
+        "Cuartos de Final",
+        "Semifinales",
+        "Final",
+    ]
+    ROUND_EMOJI = {
+        "Ronda de 32":      "⚽",
+        "Octavos de Final": "🔥",
+        "Cuartos de Final": "⚡",
+        "Semifinales":      "🌟",
+        "Final":            "🏆",
     }
 
-    for round_name, round_matches in ko_results.items():
-        st.markdown(f"### {round_icons.get(round_name, round_name)}")
+    def match_card(m, compact=False):
+        """Renderiza una tarjeta de partido HTML."""
+        ta  = display_name(m["team_a"])
+        tb  = display_name(m["team_b"])
+        la  = m.get("label_a", "")
+        lb  = m.get("label_b", "")
+        sa  = m["score_a"]
+        sb  = m["score_b"]
+        w   = m["winner"]
+        pen = "✏️ pen." if m["penalties"] else ""
 
-        n_cols = min(len(round_matches), 4)
-        cols = st.columns(n_cols)
+        win_a = w == m["team_a"]
 
-        for i, match in enumerate(round_matches):
-            col = cols[i % n_cols]
-            ta  = display_name(match["team_a"])
-            tb  = display_name(match["team_b"])
-            sa  = match["score_a"]
-            sb  = match["score_b"]
-            w   = display_name(match["winner"])
-            pen = " ✏️ pen." if match["penalties"] else ""
+        badge_a = f'<span style="font-size:0.7em;color:#aaa;margin-right:4px">{la}</span>' if la else ""
+        badge_b = f'<span style="font-size:0.7em;color:#aaa;margin-right:4px">{lb}</span>' if lb else ""
 
-            # Highlight ganador
-            if match["winner"] == match["team_a"]:
-                line_a = f"**🟢 {ta} {sa}**"
-                line_b = f"⬜ {tb} {sb}"
+        style_a = "font-weight:700;color:#4ade80;" if win_a  else "color:#ccc;"
+        style_b = "font-weight:700;color:#4ade80;" if not win_a else "color:#ccc;"
+
+        pen_html = f'<div style="font-size:0.7em;color:#fbbf24;margin-top:2px">{pen}</div>' if pen else ""
+
+        return f"""
+<div style="border:1px solid #334155;border-radius:8px;padding:8px 10px;
+            margin-bottom:6px;background:#0f172a;min-width:180px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+    <span style="{style_a}">{badge_a}{ta}</span>
+    <span style="{style_a};font-size:1.1em;margin-left:6px">{sa}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span style="{style_b}">{badge_b}{tb}</span>
+    <span style="{style_b};font-size:1.1em;margin-left:6px">{sb}</span>
+  </div>
+  {pen_html}
+</div>"""
+
+    # Mostrar cada ronda en un expander (Ronda de 32 colapsada por defecto)
+    for rname in ROUND_ORDER:
+        if rname not in ko_results:
+            continue
+        matches_r = ko_results[rname]
+        emoji     = ROUND_EMOJI.get(rname, "")
+        n_matches = len(matches_r)
+
+        is_final = (rname == "Final")
+        expanded = rname != "Ronda de 32"
+
+        with st.expander(f"{emoji} {rname}  ({n_matches} partido{'s' if n_matches > 1 else ''})", expanded=expanded):
+
+            if is_final:
+                # Final centrada y grande
+                m = matches_r[0]
+                st.markdown(match_card(m), unsafe_allow_html=True)
+                st.success(f"🏆 **Campeón: {display_name(m['winner'])}**")
+
             else:
-                line_a = f"⬜ {ta} {sa}"
-                line_b = f"**🟢 {tb} {sb}**"
-
-            with col:
-                st.markdown( 
-                    f"""
-<div style="border:1px solid #444; border-radius:8px; padding:10px; margin-bottom:10px; background:#f5f5f5;">
-  <div style="font-size:0.8em; color:#aaa; margin-bottom:4px;">{round_name}</div>
-  <div style="font-size:1em;">{line_a}</div>
-  <div style="font-size:1em;">{line_b}</div>
-  <div style="font-size:0.78em; color:#f0c040; margin-top:6px;">🏅 {w}{pen}</div>
-</div>
-""",
-                    unsafe_allow_html=True,
-                )
-
-        st.markdown("")  # espaciado entre rondas
+                # Columnas adaptadas al número de partidos
+                n_cols = min(n_matches, 4)
+                cols   = st.columns(n_cols)
+                for i, m in enumerate(matches_r):
+                    with cols[i % n_cols]:
+                        st.markdown(match_card(m), unsafe_allow_html=True)
 
     st.markdown("---")
     st.success(f"🏆 **Campeón del Mundial 2026: {display_name(champion)}**")
