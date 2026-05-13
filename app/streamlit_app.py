@@ -228,7 +228,7 @@ if st.button("⚽ Simular Mundial 2026"):
     df_probs["Probabilidad (%)"] = (df_probs["Probabilidad (%)"] * 100).round(2)
     df_probs = df_probs.sort_values(by="Probabilidad (%)", ascending=False).reset_index(drop=True)
 
-    st.subheader("🏆 Probabilidad de campeón (Monte Carlo 100 simulaciones)")
+    st.subheader("🏆 Probabilidad de campeón (Monte Carlo - 100 simulaciones)")
     col1, col2 = st.columns([1, 2])
     with col1:
         st.dataframe(df_probs, use_container_width=True)

@@ -242,7 +242,7 @@ def simulate_tournament(groups, features_dict, model):
 
 # MONTE CARLO
 
-def simulate_monte_carlo(groups, features_dict, model, n_simulations=1000):
+def simulate_monte_carlo(groups, features_dict, model, n_simulations=100):
     results = {}
 
     for _ in range(n_simulations):
