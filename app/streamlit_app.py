@@ -170,7 +170,7 @@ def build_features_dict(teams):
 st.set_page_config(page_title="Simulador Mundial 2026", layout="wide")
 
 st.title("🌎 Simulador del Mundial 2026")
-st.markdown("Simulación completa con un modelo predictivo basado en datos históricos y forma reciente de las selecciones. ¡Descubre quién tiene más chances de levantar la copa! 🏆⚽")
+st.markdown("Simulación completa con un modelo predictivo XGBoost, basado en datos históricos, forma reciente de las selecciones, etc. ¡Descubre quién tiene más chances de levantar la copa! 🏆⚽")
 
 
 # MOSTRAR GRUPOS
@@ -219,7 +219,7 @@ if st.button("⚽ Simular Mundial 2026"):
     df_probs["Probabilidad (%)"] = (df_probs["Probabilidad (%)"] * 100).round(2)
     df_probs = df_probs.sort_values(by="Probabilidad (%)", ascending=False).reset_index(drop=True)
 
-    st.subheader("🏆 Probabilidad de campeón (Monte Carlo 100 simulaciones)")
+    st.subheader("Probabilidad de campeón (Monte Carlo - 100 simulaciones)")
     col1, col2 = st.columns([1, 2])
     with col1:
         st.dataframe(df_probs, use_container_width=True)

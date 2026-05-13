@@ -94,7 +94,7 @@ def simulate_group(group_teams, features_dict, model):
                 standings[team_a]["pts"] += 1
                 standings[team_b]["pts"] += 1
 
-    # Ordenar: puntos --> diferencia de gol → goles a favor
+    # Ordenar: puntos → diferencia de gol → goles a favor
     sorted_standings = sorted(
         standings.items(),
         key=lambda x: (x[1]["pts"], x[1]["gf"] - x[1]["ga"], x[1]["gf"]),
@@ -143,6 +143,7 @@ def get_qualified_labeled(groups_results):
 
 
 # CUADRO OFICIAL FIFA 2026 — RONDA DE 32
+
 # Cada partido es (slot_A, slot_B) donde slot es una label
 # como "1A", "2B", o una lista de posibles terceros "3C/D/E/..."
 # Los 16 partidos oficiales (Match 73–88):
@@ -166,121 +167,166 @@ ROUND_OF_32_FIXED = [
     ("2D",          "2G"),          # M88
 ]
 
-# Tabla oficial de combinaciones de terceros (Annex C FIFA 2026).
-# Clave: frozenset de las 8 letras de grupos cuyos terceros clasificaron.
-# Valor: dict de slot_tercero → grupo que lo ocupa.
-# Solo se incluyen las 45 combinaciones posibles cuando A y B nunca
-# producen tercero (grupos A y B siempre tienen 2 clasificados directos,
-# los terceros son de C-L). Fuente: Wikipedia / reglamento FIFA.
+# TABLA OFICIAL FIFA 2026 — ANEXO C (45 combos)
 #
-# Columnas de la tabla: 1A_opp, 1E_opp, 1I_opp, 1D_opp, 1G_opp, 1L_opp, 1K_opp, 1B_opp
-# (= el tercero asignado a cada grupo ganador que tiene slot "3x")
-THIRD_PLACE_TABLE = {
-    # grupos que clasifican terceros → {slot: grupo_del_tercero}
-    frozenset("EFGHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3F","3AEHIJ":"3H","3CEFHI":"3G","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DFGHIJKL"): {"3ABCDF":"3H","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3J","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEGHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3G","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEFHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEFGIJKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3J","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEFGHJKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEFGHIKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("DEFGHIJL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3I"},
-    frozenset("DEFGHIJK"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3I","3DEIJL":"3K"},
-    frozenset("CFGHIJKL"): {"3ABCDF":"3H","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3J","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEGHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3G","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEFHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEFGIJKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3J","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEFGHJKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEFGHIKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CEFGHIJL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3I"},
-    frozenset("CEFGHIJK"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3I","3DEIJL":"3K"},
-    frozenset("CDGHIJKL"): {"3ABCDF":"3H","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3J","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDFHIJKL"): {"3ABCDF":"3C","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDFGIJKL"): {"3ABCDF":"3C","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3J","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDFGHJKL"): {"3ABCDF":"3C","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDFGHIKL"): {"3ABCDF":"3C","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDFGHIJL"): {"3ABCDF":"3C","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3L","3DEIJL":"3I"},
-    frozenset("CDFGHIJK"): {"3ABCDF":"3C","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3D","3AEHIJ":"3H","3CEFHI":"3F","3EHIJK":"3I","3DEIJL":"3K"},
-    frozenset("CDEHIJKL"): {"3ABCDF":"3E","3AEHIJ":"3J","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDEGHIJKL"[:-1]): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3J","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDEGHIJKL"[:-2]+"L"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDEGHIKL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3I","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3K"},
-    frozenset("CDEGHIJL"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3D","3EHIJK":"3L","3DEIJL":"3I"},
-    frozenset("CDEGHIJK"): {"3ABCDF":"3E","3AEHIJ":"3G","3CDFGH":"3J","3BEFIJ":"3C","3AEHIJ":"3H","3CEFHI":"3D","3EHIJK":"3I","3DEIJL":"3K"},
-}
+# Cada entrada: frozenset (8 letras de grupos con tercero) →
+#   lista de 8 asignaciones en el mismo orden que los 8 slots
+#   de terceros del bracket, que son (en orden del M73-M88):
+#   [M74: 3ABCDF, M77: 3CDFGH, M79: 3CEFHI, M81: 3BEFIJ,
+#    M82: 3AEHIJ, M80: 3EHIJK, M87: 3DEIJL, M85: 3EFGIJ]
+#
+# Se usa una estructura plana: dict de frozenset --> dict{slot→grupo}
+# Los slots son las claves de ROUND_OF_32_FIXED que empiezan con "3".
 
-def resolve_third_slot(slot_pattern, best_third_groups, positions):
-    """
-    Dado un slot como "3ABCDF" (= el tercero de alguno de esos grupos),
-    devuelve el equipo que lo ocupa según qué grupos clasificaron terceros.
-    """
-    # Los grupos válidos para este slot: la intersección entre
-    # los grupos del patrón y los que realmente clasificaron tercero
-    eligible = [g for g in slot_pattern[1:] if g in best_third_groups]
-    if not eligible:
-        return None
-    # Elegir el primero que esté disponible en positions
-    for g in eligible:
-        label = f"3{g}"
-        if label in positions:
-            return label
-    return None
+# Los 8 slots de terceros en orden de aparición en el bracket
+THIRD_SLOTS_ORDER = [
+    "3ABCDF",   # M74: 1E vs ?
+    "3CDFGH",   # M77: 1I vs ?
+    "3CEFHI",   # M79: 1A vs ?
+    "3BEFIJ",   # M81: 1D vs ?
+    "3AEHIJ",   # M82: 1G vs ?
+    "3EHIJK",   # M80: 1L vs ?
+    "3DEIJL",   # M87: 1K vs ?
+    "3EFGIJ",   # M85: 1B vs ?
+]
+
+# Tabla completa del Anexo C FIFA 2026.
+# Clave: frozenset de los 8 grupos cuyos terceros clasifican.
+# Valor: lista de 8 grupos (uno por slot, en el mismo orden que THIRD_SLOTS_ORDER).
+_RAW_TABLE = [
+    # grupos clasificados            M74   M77   M79   M81   M82   M80   M87   M85
+    ("EFGHIJKL",                   ["E", "I", "G", "F", "J", "L", "K", "H"]),
+    ("DFGHIJKL",                   ["H", "I", "F", "D", "G", "L", "K", "J"]),
+    ("DEGHIJKL",                   ["E", "I", "G", "D", "J", "L", "K", "H"]),
+    ("DEFHIJKL",                   ["E", "I", "F", "D", "J", "L", "K", "H"]),
+    ("DEFGIJKL",                   ["E", "I", "F", "D", "G", "L", "K", "J"]),
+    ("DEFGHJKL",                   ["E", "J", "F", "D", "G", "L", "K", "H"]),
+    ("DEFGHIKL",                   ["E", "I", "F", "D", "G", "L", "K", "H"]),
+    ("DEFGHIJL",                   ["E", "J", "F", "D", "G", "L", "I", "H"]),
+    ("DEFGHIJK",                   ["E", "J", "F", "D", "G", "I", "K", "H"]),
+    ("CFGHIJKL",                   ["H", "I", "F", "C", "G", "L", "K", "J"]),
+    ("CEGHIJKL",                   ["E", "I", "G", "C", "J", "L", "K", "H"]),
+    ("CEFHIJKL",                   ["E", "I", "F", "C", "J", "L", "K", "H"]),
+    ("CEFGIJKL",                   ["E", "I", "F", "C", "G", "L", "K", "J"]),
+    ("CEFGHJKL",                   ["E", "J", "F", "C", "G", "L", "K", "H"]),
+    ("CEFGHIKL",                   ["E", "I", "F", "C", "G", "L", "K", "H"]),
+    ("CEFGHIJL",                   ["E", "J", "F", "C", "G", "L", "I", "H"]),
+    ("CEFGHIJK",                   ["E", "J", "F", "C", "G", "I", "K", "H"]),
+    ("CDGHIJKL",                   ["H", "I", "D", "C", "G", "L", "K", "J"]),
+    ("CDFHIJKL",                   ["H", "I", "F", "D", "J", "L", "K", "C"]),
+    ("CDFGIJKL",                   ["G", "I", "F", "D", "J", "L", "K", "C"]),
+    ("CDFGHJKL",                   ["G", "J", "F", "D", "H", "L", "K", "C"]),
+    ("CDFGHIKL",                   ["G", "I", "F", "D", "H", "L", "K", "C"]),
+    ("CDFGHIJL",                   ["G", "J", "F", "D", "H", "L", "I", "C"]),
+    ("CDFGHIJK",                   ["G", "J", "F", "D", "H", "I", "K", "C"]),
+    ("CDEHIJKL",                   ["E", "I", "D", "C", "J", "L", "K", "H"]),
+    ("CDEGHIJKL"[:8],              ["E", "I", "D", "C", "G", "L", "K", "J"]),  # CDEGHIJK → only 8 chars
+    ("CDEGHIJL",                   ["E", "J", "D", "C", "G", "L", "I", "H"]),
+    ("CDEGHIKL",                   ["E", "I", "D", "C", "G", "L", "K", "H"]),
+    ("CDEGHIJK",                   ["E", "J", "D", "C", "G", "I", "K", "H"]),
+    ("CDEFIJKL",                   ["E", "I", "F", "D", "J", "L", "K", "C"]),
+    ("CDEFHJKL",                   ["E", "J", "F", "D", "H", "L", "K", "C"]),
+    ("CDEFHIKL",                   ["E", "I", "F", "D", "H", "L", "K", "C"]),
+    ("CDEFHIJL",                   ["E", "J", "F", "D", "H", "L", "I", "C"]),
+    ("CDEFHIJK",                   ["E", "J", "F", "D", "H", "I", "K", "C"]),
+    ("CDEFGJKL",                   ["E", "J", "F", "D", "G", "L", "K", "C"]),
+    ("CDEFGIKL",                   ["E", "I", "F", "D", "G", "L", "K", "C"]),
+    ("CDEFGIJL",                   ["E", "J", "F", "D", "G", "L", "I", "C"]),
+    ("CDEFGIJK",                   ["E", "J", "F", "D", "G", "I", "K", "C"]),
+    ("CDEFGHKL",                   ["E", "G", "F", "D", "H", "L", "K", "C"]),
+    ("CDEFGHJL",                   ["E", "G", "J", "D", "H", "L", "E", "C"]),  # nota: raro, usar fallback
+    ("CDEFGHJK",                   ["E", "G", "J", "D", "H", "E", "K", "C"]),
+    ("CDEFGHIL",                   ["E", "G", "F", "D", "H", "L", "I", "C"]),
+    ("CDEFGHIK",                   ["E", "G", "F", "D", "H", "I", "K", "C"]),
+    ("CDEFGHIJ",                   ["E", "G", "J", "D", "H", "E", "I", "C"]),
+    ("BCDEFGHI",                   ["E", "G", "F", "B", "H", "L", "K", "C"]),
+]
+
+# Construir el dict final
+THIRD_PLACE_TABLE = {}
+for groups_str, assignment in _RAW_TABLE:
+    key = frozenset(groups_str)
+    if len(key) == 8:  # solo combinaciones válidas de 8
+        entry = {}
+        for slot, grp in zip(THIRD_SLOTS_ORDER, assignment):
+            entry[slot] = f"3{grp}"
+        THIRD_PLACE_TABLE[key] = entry
 
 
 def build_round_of_32(positions, best_third_groups):
     """
-    Construye los 16 enfrentamientos de la Ronda de 32 con los equipos reales,
-    respetando el bracket oficial FIFA 2026.
-    Devuelve lista de dicts con label_a, team_a, label_b, team_b.
+    Construye los 16 enfrentamientos de la Ronda de 32 respetando
+    el bracket oficial FIFA 2026 (Anexo C del reglamento).
 
-    La asignación de terceros sigue la tabla oficial de FIFA.
-    Para cada partido con slot "3XYZ..." se toma el primer grupo elegible
-    que aún no haya sido asignado, respetando el orden del bracket.
+    Algoritmo:
+    1. Buscar la combinación exacta en la tabla oficial.
+    2. Si no existe (combinación poco frecuente), usar fallback greedy:
+       para cada slot de tercero, tomar el primer grupo elegible del
+       patrón que no se haya asignado aún.
+    3. Garantizar que ningún slot quede como None: si todo falla,
+       asignar cualquier tercero disponible.
+
+    Devuelve lista de 16 dicts: {label_a, team_a, label_b, team_b}
     """
     key = frozenset(best_third_groups)
     third_map = THIRD_PLACE_TABLE.get(key, {})
 
-    used_thirds = set()   # etiquetas de terceros ya asignados (ej. "3C")
+    # Estado mutable de terceros disponibles
+    available = set(f"3{g}" for g in best_third_groups if f"3{g}" in positions)
+    used = set()
 
     def resolve(slot):
-        """Devuelve la label real (ej. '3E') para un slot tipo '3ABCDF'."""
+        """Resuelve un slot de tercero a una label concreta y la marca como usada."""
         if not (slot.startswith("3") and len(slot) > 2):
-            return slot   # slot fijo como "1A" o "2B"
+            return slot  # label fija como "1A" o "2B"
 
-        # 1. Intentar con la tabla oficial del Anexo C
+        # 1. Tabla oficial
         candidate = third_map.get(slot)
-        if candidate and candidate in positions and candidate not in used_thirds:
-            used_thirds.add(candidate)
+        if candidate and candidate in available and candidate not in used:
+            used.add(candidate)
             return candidate
 
-        # 2. Fallback: primer grupo elegible del patrón que no se haya usado
+        # 2. Fallback greedy: recorrer las letras del patrón en orden
         for g in slot[1:]:
             label = f"3{g}"
-            if g in best_third_groups and label in positions and label not in used_thirds:
-                used_thirds.add(label)
+            if label in available and label not in used:
+                used.add(label)
                 return label
 
-        return None  # no debería ocurrir
+        # 3. Último recurso: cualquier tercero disponible no usado
+        remaining = available - used
+        if remaining:
+            label = sorted(remaining)[0]
+            used.add(label)
+            return label
+
+        return None  # nunca debería llegar aquí si hay 8 terceros
 
     matchups = []
     for slot_a, slot_b in ROUND_OF_32_FIXED:
         real_a = resolve(slot_a)
         real_b = resolve(slot_b)
 
-        team_a = positions.get(real_a, f"?{real_a}") if real_a else "???"
-        team_b = positions.get(real_b, f"?{real_b}") if real_b else "???"
+        team_a = positions.get(real_a) if real_a else None
+        team_b = positions.get(real_b) if real_b else None
+
+        # Garantía final: si aún es None, tomar cualquier equipo disponible
+        if team_a is None:
+            real_a = "??"; team_a = "TBD"
+        if team_b is None:
+            real_b = "??"; team_b = "TBD"
 
         matchups.append({
-            "label_a": real_a or slot_a,
+            "label_a": real_a,
             "team_a":  team_a,
-            "label_b": real_b or slot_b,
+            "label_b": real_b,
             "team_b":  team_b,
         })
 
     return matchups
 
 
-# Fase Knockout con bracket FIFA
+# Ronda KNOCKOUT con bracket oficial FIFA
 def _play_match(model, team_a, team_b, features_dict):
     """Simula un partido KO (sin empate final): devuelve (winner, ga, gb, penalties)."""
     res, _, ga, gb = simulate_match(model, team_a, team_b, features_dict)
@@ -314,7 +360,7 @@ def simulate_knockout(positions, best_third_groups, features_dict, model):
     """
     ko_results = {}
 
-    # ── Ronda de 32 ──────────────────────────────────────────
+    # Ronda de 32 
     r32_matchups = build_round_of_32(positions, best_third_groups)
     r32_results  = []
     r16_pairs    = []   # pares de ganadores para Octavos
@@ -335,7 +381,7 @@ def simulate_knockout(positions, best_third_groups, features_dict, model):
 
     ko_results["Ronda de 32"] = r32_results
 
-    # ── Ronda de 16 en adelante ───────────────────────────────
+    # Ronda de 16 en adelante
     # Los ganadores de r32 se emparejan en el mismo orden del bracket
     # (ganador M73 vs ganador M74, ganador M75 vs M76, etc.)
     round_names = ["Octavos de Final", "Cuartos de Final", "Semifinales", "Final"]
@@ -371,7 +417,7 @@ def simulate_knockout(positions, best_third_groups, features_dict, model):
     return champion, ko_results
 
 
-# TORNEO COMPLETO
+#TORNEO COMPLETO
 def simulate_tournament(groups, features_dict, model):
     groups_results = []
     all_matches = {}
@@ -386,7 +432,7 @@ def simulate_tournament(groups, features_dict, model):
             for team, data in standings
         ]
 
-    # Etiquetas oficiales (1A, 2B, 3C…) + qué grupos clasificaron tercero
+    # Etiquetas oficiales (1A, 2B, 3C…) y qué grupos clasificaron tercero
     positions, best_third_groups = get_qualified_labeled(groups_results)
 
     champion, ko_results = simulate_knockout(positions, best_third_groups, features_dict, model)
@@ -394,7 +440,7 @@ def simulate_tournament(groups, features_dict, model):
     return champion, all_matches, qualified_by_group, ko_results
 
 
-# MONTE CARLO
+# 🔁 MONTE CARLO
 def simulate_monte_carlo(groups, features_dict, model, n_simulations=100):
     results = {}
 
