@@ -1,0 +1,43 @@
+# 🌎 World Cup 2026 Simulator
+
+Simulador del Mundial 2026 usando Machine Learning (XGBoost) y simulación Monte Carlo.
+
+## Features
+
+* Predicción de partidos basada en:
+
+  * ELO
+  * Forma reciente
+  * Goles a favor / en contra
+* Simulación completa:
+
+  * Fase de grupos
+  * Clasificación de terceros
+  * Eliminatorias
+* 1000 simulaciones Monte Carlo
+
+## Modelo
+
+Modelo entrenado con partidos internacionales históricos.
+
+## Demo local
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+## Ejemplo de salida
+
+* Probabilidad de campeón
+* Simulación completa del torneo
+
+## Tech Stack
+
+* Python
+* XGBoost
+* Pandas
+* Streamlit
+
+## Autor
+
+Javier Ortiz
