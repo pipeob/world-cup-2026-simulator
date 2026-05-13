@@ -212,12 +212,12 @@ if st.button("⚽ Simular Mundial 2026"):
     
     # SIMULACION MONTE CARLO
 
-    with st.spinner("Ejecutando 1000 simulaciones (Monte Carlo)..."):
+    with st.spinner("Ejecutando 500 simulaciones (Monte Carlo)..."):
         probs = simulate_monte_carlo(
             mapped_groups,
             features_ready,
             model,
-            n_simulations=1000
+            n_simulations=500
         )
 
     df_probs = pd.DataFrame(
@@ -228,7 +228,7 @@ if st.button("⚽ Simular Mundial 2026"):
     df_probs["Probabilidad (%)"] = (df_probs["Probabilidad (%)"] * 100).round(2)
     df_probs = df_probs.sort_values(by="Probabilidad (%)", ascending=False).reset_index(drop=True)
 
-    st.subheader("🏆 Probabilidad de campeón (Monte Carlo 1000 simulaciones)")
+    st.subheader("🏆 Probabilidad de campeón (Monte Carlo 500 simulaciones)")
     col1, col2 = st.columns([1, 2])
     with col1:
         st.dataframe(df_probs, use_container_width=True)
